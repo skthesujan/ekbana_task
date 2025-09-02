@@ -1,5 +1,5 @@
 <?php
 
 return [
-    'key' => env('API_KEY', null),
+    'key' => env('API_KEY',null),
 ];

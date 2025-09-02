@@ -11,7 +11,7 @@ class StoreCompanyRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -24,7 +24,7 @@ class StoreCompanyRequest extends FormRequest
         return [
             'title' => 'required|string|max:255',
             'category_id' => 'nullable|exists:company_categories,id',
-            'image' => 'nullable|image|max:255',
+            'image' => 'nullable|image|max:2048',
             'description' => 'nullable|string',
             'status' => 'required|boolean',
         ];

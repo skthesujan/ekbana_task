@@ -20,10 +20,16 @@ class CompanyResource extends JsonResource
             'title' => $this->title,
             'image' => $this->image ? asset('storage/' . $this->image) : null,
             'description' => $this->description,
-            'status' => $this->status,
+            'status' => (bool) $this->status,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'category' => new CompanyCategoryResource($this->whenLoaded('category')),
+            // 'category' => new CompanyCategoryResource($this->whenLoaded('category')),
+            'category' => $this->whenLoaded('category', function () {
+                return [
+                    'id' => $this->category->id,
+                    'name' => $this->category->name
+                ];
+            }),
         ];
     }
 }
