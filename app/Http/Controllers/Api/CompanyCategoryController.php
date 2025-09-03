@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\CompanyCategoryResource;
 use App\Http\Requests\StoreCompanyCategoryRequest;
 use App\Http\Requests\UpdateCompanyCategoryRequest;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class CompanyCategoryController extends Controller
 {
@@ -16,18 +17,29 @@ class CompanyCategoryController extends Controller
      */
     public function index(Request $request)
     {
-        $query = CompanyCategory::query();
+        try {
+            $query = CompanyCategory::query();
 
-        // Search functionality
-        if ($request->has('keyword') && !empty($request->keyword)) {
-            $keyword = $request->keyword;
-            $query->where('title', 'like', "%{$keyword}%");
+            // Search functionality
+            if ($request->has('keyword') && !empty($request->keyword)) {
+                $keyword = $request->keyword;
+                $query->where('title', 'like', "%{$keyword}%");
+            }
+
+            $categories = $query->paginate(10);
+
+            return CompanyCategoryResource::collection($categories);
+
+        } catch (\Exception $e) {
+            \Log::error('Category index error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong while fetching categories.'
+            ], 500);
         }
-
-        $categories = $query->paginate(10);
-        return CompanyCategoryResource::collection($categories);
-
     }
+
 
     /**
      * Store a newly created resource in storage.
@@ -55,13 +67,36 @@ class CompanyCategoryController extends Controller
      */
     public function show(string $id)
     {
-        $category = CompanyCategory::with('companies')->findOrFail($id);
-        if (!$category) {
+        try {
+            $category = CompanyCategory::with([
+                'companies' => function ($query) {
+                    $query->where('status', true);
+                }
+            ])->findOrFail($id);
+
             return response()->json([
-                'message' => 'Category not found'
+                'success' => true,
+                'data' => [
+                    'id' => $category->id,
+                    'title' => $category->title,
+                    'companies' => $category->companies->map(function ($company) {
+                        return [
+                            'id' => $company->id,
+                            'title' => $company->title,
+                            'image' => $company->image,
+                            'description' => $company->description,
+                            'status' => $company->status
+                        ];
+                    })
+                ]
+            ]);
+
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Category not found.'
             ], 404);
         }
-        return new CompanyCategoryResource($category);
     }
 
     /**
@@ -69,32 +104,68 @@ class CompanyCategoryController extends Controller
      */
     public function update(UpdateCompanyCategoryRequest $request, string $id)
     {
-        $category = CompanyCategory::findOrFail($id);
-        $category->update($request->validated());
-        return response()->json([
-            'success' => true,
-            'data' => new CompanyCategoryResource($category)
-        ]);
+        try {
+            $category = CompanyCategory::findOrFail($id);
+
+            $category->update($request->validated());
+
+            return response()->json([
+                'success' => true,
+                'data' => new CompanyCategoryResource($category)
+            ], 200);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Category not found.'
+            ], 404);
+        } catch (\Exception $e) {
+            \Log::error('Category update error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong while updating the category.'
+            ], 500);
+        }
     }
+
 
     /**
      * Remove the specified resource from storage.
      */
     public function destroy(string $id)
     {
-        $category = CompanyCategory::findOrFail($id);
-        // Check if category has companies
-        if ($category->companies()->count() > 0) {
+        try {
+            $category = CompanyCategory::findOrFail($id);
+
+            // Check if category has companies
+            if ($category->companies()->count() > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot delete category with associated companies'
+                ], 422);
+            }
+
+            $category->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Category deleted successfully'
+            ], 200);
+
+        } catch (ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Cannot delete category with associated companies'
-            ], 422);
-        }
+                'message' => 'Category not found.'
+            ], 404);
 
-        $category->delete();
-        return response()->json([
-            'success' => true,
-            'message' => 'Category deleted successfully'
-        ]);
+        } catch (\Exception $e) {
+            \Log::error('Category delete error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong while deleting the category.'
+            ], 500);
+        }
     }
+
 }
