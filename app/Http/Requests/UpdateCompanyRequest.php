@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateCompanyRequest extends FormRequest
 {
@@ -26,7 +27,20 @@ class UpdateCompanyRequest extends FormRequest
             'category_id' => 'nullable|exists:company_categories,id',
             'image' => 'nullable|image|max:2048',
             'description' => 'nullable|string',
-            'status' => 'sometimes|required|boolean',
+            'status' => ['sometimes', Rule::in(['true', 'false', '0', '1', true, false, 0, 1])],
         ];
+    }
+
+    protected function prepareForValidation()
+    {
+        if ($this->has('status')) {
+            $status = $this->status;
+
+            if ($status === 'true' || $status === '1') {
+                $this->merge(['status' => true]);
+            } elseif ($status === 'false' || $status === '0') {
+                $this->merge(['status' => false]);
+            }
+        }
     }
 }

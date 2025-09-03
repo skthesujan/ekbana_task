@@ -28,15 +28,5 @@ class Company extends Model
                 Storage::disk('public')->delete($company->image);
             }
         });
-
-        // Add updating event to handle image deletion when updating
-        static::updating(function ($company) {
-            $originalImage = $company->getOriginal('image');
-            $newImage = $company->image;
-
-            if ($originalImage && $originalImage !== $newImage && Storage::disk('public')->exists($originalImage)) {
-                Storage::disk('public')->delete($originalImage);
-            }
-        });
     }
 }
