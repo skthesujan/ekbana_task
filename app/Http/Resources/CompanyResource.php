@@ -24,11 +24,12 @@ class CompanyResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             // 'category' => new CompanyCategoryResource($this->whenLoaded('category')),
-            'category' => $this->whenLoaded('category', function () {
+            'category' => $this->when($this->category_id && $this->relationLoaded('category'), function () {
                 return [
                     'id' => $this->category->id,
-                    'name' => $this->category->name
+                    'title' => $this->category->title
                 ];
+
             }),
         ];
     }

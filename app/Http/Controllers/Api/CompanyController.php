@@ -39,14 +39,19 @@ class CompanyController extends Controller
 
             // Handle image upload
             if ($request->hasFile('image')) {
-                $data['image'] = $request->file('image')->store('companies', 'public');
+                $imagePath = $request->file('image')->store('companies', 'public');
+                $data['image'] = $imagePath;
             }
 
-            $company = Company::create($data);
+
+            $company = Company::create($data)->fresh(['category']);
+
+            // Load the category relationship
+            $company->load('category');
 
             return response()->json([
                 'success' => true,
-                'data' => new CompanyResource($company->load('category'))
+                'data' => new CompanyResource($company)
             ], 201);
 
         } catch (\Exception $e) {
