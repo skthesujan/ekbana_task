@@ -18,16 +18,28 @@ class CompanyController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Company::with('category');
+        try {
+            $query = Company::with('category');
 
-        // Filter by category if provided
-        if ($request->has('category_id') && !empty($request->category_id)) {
-            $query->where('category_id', $request->category_id);
+            // Filter by category if provided
+            if ($request->has('category_id') && !empty($request->category_id)) {
+                $query->where('category_id', $request->category_id);
+            }
+
+            $companies = $query->paginate(10);
+
+            return CompanyResource::collection($companies);
+
+        } catch (\Exception $e) {
+            \Log::error('Company index error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong while fetching companies.'
+            ], 500);
         }
-
-        $companies = $query->paginate(10);
-        return CompanyResource::collection($companies);
     }
+
 
     /**
      * Store a newly created resource in storage.
